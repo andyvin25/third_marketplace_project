@@ -49,7 +49,7 @@ jobs:
           path: target/
 
       - name: Run native compile
-        run: PROFILE_STATE=dev mvn clean package -Pnative -Dmaven.test.skip=true
+        run: PROFILE_STATE=dev mvn -Pnative native:compile -Dmaven.test.skip=true
 
       - name: List target
         run: ls -la target/
