@@ -1,5 +1,4 @@
 name: Native Build
-
 on:
   push:
     branches: ["**"]
@@ -7,49 +6,31 @@ on:
     branches: ["**"]
 
 jobs:
-  compile:
-    name: Clean Package (Native)
-    runs-on: ubuntu-latest
-    container:
-      image: maven:3.9.6-eclipse-temurin-21
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Maven clean package
-        run: PROFILE_STATE=dev mvn clean package -Pnative -Dmaven.test.skip=true
-
-      - name: List target
-        run: ls -la target/
-
-      - name: Upload target artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: target
-          path: target/
-
   build:
     name: Build Native Image
     runs-on: ubuntu-latest
-    needs: compile
-    container:
-      image: ghcr.io/graalvm/native-image-community:21
-      options: --entrypoint ""
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Maven
-        run: |
-          curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz | tar -xz -C /opt
-          ln -s /opt/apache-maven-3.9.6/bin/mvn /usr/local/bin/mvn
-
-      - name: Download target artifact
-        uses: actions/download-artifact@v4
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
         with:
-          name: target
-          path: target/
+          java-version: '21'
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
 
-      - name: Run native compile
-        run: PROFILE_STATE=dev mvn -Pnative native:compile -Dmaven.test.skip=true
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build native image
+        run: mvn -Pnative native:compile -Dmaven.test.skip=true
 
       - name: List target
         run: ls -la target/
@@ -58,4 +39,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: native-image
-          path: target/
+          path: target/marketplace
